@@ -10,6 +10,25 @@ from googleapiclient.errors import HttpError
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.image import MIMEImage
+import shutil
+from datetime import datetime
+
+
+
+def generate_data(holdings):
+    value = dict()
+ 
+    historic = pd.DataFrame()
+    stocks = list(holdings.keys())
+
+    for stock in stocks:
+        info = yf.Ticker(stock)
+        value[stock] = holdings[stock] * info.info['regularMarketPreviousClose']
+        stock_history = info.history(period="6mo")
+        historic = pd.concat([historic, (stock_history['Close'] * holdings[stock]).rename(stock)], axis=1)
+
+    historic['Total'] = historic.sum(axis=1)
+    return historic
 
 def generate_plots(holdings):
     value = dict()
@@ -17,7 +36,10 @@ def generate_plots(holdings):
 
     stocks = list(holdings.keys())
 
-    if not os.path.exists('plots'):
+    if os.path.exists('plots'):
+        shutil.rmtree('plots')  # Deletes everything in the directory
+        os.makedirs('plots')
+    else:
         os.makedirs('plots')
 
     for stock in stocks:
@@ -41,13 +63,13 @@ def generate_plots(holdings):
     plt.title(f'Six Month Value of Portfolio')  
     # plt.show
 
-    plt.savefig('plots/portfolio_plot.png')
+    plt.savefig('plots/zzz_portfolio_plot.png')
     plt.close()
 
     return 'plots/' 
 
 
-def email_create(sender, to, subject, message_text, holdings):
+def email_create(sender, to, holdings):
     SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
     def get_credentials():
@@ -62,43 +84,103 @@ def email_create(sender, to, subject, message_text, holdings):
                 token.write(creds.to_json())
         return creds
 
-    def create_message(sender, to, subject, message_text, image_dir):
-        """Create an email message with inline images from a specified directory."""
+    def create_message(sender, to, image_dir):
+        """Create an email message with inline images and improved HTML/CSS styling."""
         message = MIMEMultipart('related')
         message['to'] = to
         message['from'] = sender
-        message['subject'] = subject
-        
-        # Create the HTML content with images
-        html_content = f"<html><body><p>{message_text}</p>"
+        message['subject'] = f"Your Daily Porfolio update for {datetime.now().strftime('%B %d, %Y')}"
+
+        # Create HTML content with improved CSS styling
+        html_content = f"""
+        <html>
+        <head>
+            <style>
+                .email-container {{
+                    font-family: Arial, sans-serif;
+                    max-width: 600px;
+                    margin: auto;
+                    padding: 20px;
+                    background-color: #f9f9f9;
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                }}
+                h1, h2 {{
+                    color: #333;
+                }}
+                p {{
+                    font-size: 1em;
+                    color: #333;
+                }}
+                .image-container img {{
+                    display: block;
+                    max-width: 100%;
+                    margin: 10px 0;
+                    border-radius: 5px;
+                }}
+                .footer {{
+                    font-size: 0.9em;
+                    color: #777;
+                    margin-top: 20px;
+                }}
+            </style>
+        </head>
+        <body>
+            <div class="email-container">
+                <h1>Your Daily Portfolio Update Has Landed!</h1>
+                <p>{f"Your current portfolio value is ${float(generate_data(holdings)['Total'].iloc[-1]):,.2f}"}</p>
+                <div class="image-container">
+        """
 
         # Automatically add all images from the specified directory
         for filename in os.listdir(image_dir):
-            if filename.endswith(('.png', '.jpg', '.jpeg')):  # Include only image files
-                html_content += f'<img src="cid:{filename}"><br>'
-        
-        html_content += "</body></html>"
+            if filename.endswith(('.png', '.jpg', '.jpeg')):
+                # Add image
+                html_content += f'<br><img src="cid:{filename}">'
+                # Add caption text (can customize the caption as needed)
+                if filename[:4] != "zzz_":
+                    caption = f"Current Stock Value: ${float(generate_data(holdings)[filename[:4]].iloc[-1]):,.2f}"  # Customize caption here if needed
+                    html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'  # Center-align the caption
+                else:
+                    caption = f"Portfolio Value"  # Customize caption here if needed
+                    html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'  # Center-align the caption
+
+
+        # Close HTML content
+        html_content += """
+                </div>
+                <div class="footer">
+                    <p>Thank you for using my service.</p>
+                    <p>Created by AJ Beery | <a href="https://www.linkedin.com/in/aj-beery/">Connect with me!</a></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # Attach the HTML content
         message.attach(MIMEText(html_content, 'html'))
 
-        # Attach images
+        # Attach images inline
         for filename in os.listdir(image_dir):
-            if filename.endswith(('.png', '.jpg', '.jpeg')):  # Include only image files
+            if filename.endswith(('.png', '.jpg', '.jpeg')):
                 with open(os.path.join(image_dir, filename), 'rb') as f:
                     img = MIMEImage(f.read(), name=filename)
                     img.add_header('Content-ID', f'<{filename}>')
                     img.add_header('Content-Disposition', 'inline', filename=filename)
                     message.attach(img)
-        
+
+        # Return the email message in base64 encoded format
         return {'raw': base64.urlsafe_b64encode(message.as_bytes()).decode()}
 
-    def send_email(sender, to, subject, message_text, image_dir):
+    def send_email(sender, to, image_dir):
         """Send an email using the Gmail API."""
         # Assuming get_credentials() and service creation are handled here
         creds = get_credentials()
         service = build('gmail', 'v1', credentials=creds)
 
         # Create the email message with inline images
-        message = create_message(sender, to, subject, message_text, image_dir)
+        message = create_message(sender, to, image_dir)
         
         # Send the message
         sent_message = service.users().messages().send(userId="me", body=message).execute()
@@ -106,4 +188,4 @@ def email_create(sender, to, subject, message_text, holdings):
 
     image_directory = generate_plots(holdings)
     # Call `send_email` with the provided arguments
-    send_email(sender, to, subject, message_text, image_directory)
+    send_email(sender, to, image_directory)
