@@ -42,27 +42,72 @@ def generate_plots(holdings):
     else:
         os.makedirs('plots')
 
+    # for stock in stocks:
+    #     plt.figure(figsize=(10,6))
+    #     info = yf.Ticker(stock)
+    #     value[stock] = holdings[stock] * info.info['regularMarketPreviousClose']
+    #     stock_history = info.history(period="6mo")
+    #     historic = pd.concat([historic, (stock_history['Close'] * holdings[stock]).rename(stock)], axis=1)
+    #     plt.plot(stock_history.index, stock_history['Close'] * holdings[stock], marker='o', linestyle='-')
+    #     plt.title(f'Six Month Value of {stock.upper()} - {holdings[stock]} Shares')
+    #     # plt.show
+
+    #     plot_filename = f'plots/{stock}_plot.png'
+    #     plt.savefig(plot_filename)
+    #     plt.close()
+
     for stock in stocks:
-        plt.figure(figsize=(10,6))
+        plt.figure(figsize=(10, 6))
         info = yf.Ticker(stock)
         value[stock] = holdings[stock] * info.info['regularMarketPreviousClose']
         stock_history = info.history(period="6mo")
-        historic = pd.concat([historic, (stock_history['Close'] * holdings[stock]).rename(stock)], axis=1)
-        plt.plot(stock_history.index, stock_history['Close'] * holdings[stock], marker='o', linestyle='-')
-        plt.title(f'Six Month Value of {stock.upper()} - {holdings[stock]} Shares')
-        # plt.show
+        
+        # Calculate the total value based on holdings
+        total_value = stock_history['Close'] * holdings[stock]
+        historic = pd.concat([historic, total_value.rename(stock)], axis=1)
 
+        # Plotting the line
+        plt.plot(stock_history.index, total_value, marker='.', linestyle='-', color='black')
+
+        # Fill between for positive and negative slopes
+        for i in range(1, len(total_value)):
+            if total_value.iloc[i] > total_value.iloc[i - 1]:
+                # Positive slope
+                plt.fill_between(stock_history.index[i-1:i+1], total_value.iloc[i-1:i+1], color='green', alpha=0.5)
+            else:
+                # Negative slope
+                plt.fill_between(stock_history.index[i-1:i+1], total_value.iloc[i-1:i+1], color='red', alpha=0.5)
+
+        plt.title(f'Six Month Value of {stock.upper()} - {holdings[stock]} Shares')
+        plt.ylim(historic[stock].min() * 0.975, historic[stock].max() * 1.025)  # Adjust as needed
+
+        
         plot_filename = f'plots/{stock}_plot.png'
         plt.savefig(plot_filename)
         plt.close()
 
 
-    historic['Total'] = historic.sum(axis=1)
-    plt.figure(figsize=(10,6))
-    plt.plot(historic.index, historic['Total'], marker='o', linestyle='-')
-    plt.title(f'Six Month Value of Portfolio')  
-    # plt.show
 
+    historic['Total'] = historic.sum(axis=1)
+    plt.figure(figsize=(10, 6))
+
+    # Plot the line for the total portfolio value
+    plt.plot(historic.index, historic['Total'], marker='.', linestyle='-', color='black')
+
+    # Fill between for positive and negative slopes
+    for i in range(1, len(historic['Total'])):
+        if historic['Total'].iloc[i] > historic['Total'].iloc[i - 1]:
+            # Positive slope
+            plt.fill_between(historic.index[i-1:i+1], historic['Total'].iloc[i-1:i+1], color='green', alpha=0.5)
+        else:
+            # Negative slope
+            plt.fill_between(historic.index[i-1:i+1], historic['Total'].iloc[i-1:i+1], color='red', alpha=0.5)
+
+    # Set the title
+    plt.title('Six Month Value of Portfolio')  
+    plt.ylim(historic['Total'].min() * 0.975, historic['Total'].max() * 1.025)  # Adjust as needed
+
+    # Save the plot
     plt.savefig('plots/zzz_portfolio_plot.png')
     plt.close()
 
@@ -71,7 +116,7 @@ def generate_plots(holdings):
 
 def email_create(sender, to, holdings):
     SCOPES = ['https://www.googleapis.com/auth/gmail.send']
-
+    historic =generate_data(holdings)
     def get_credentials():
         """Authenticate and return Gmail API credentials."""
         creds = None
@@ -128,7 +173,7 @@ def email_create(sender, to, holdings):
         <body>
             <div class="email-container">
                 <h1>Your Daily Portfolio Update Has Landed!</h1>
-                <p>{f"Your current portfolio value is ${float(generate_data(holdings)['Total'].iloc[-1]):,.2f}"}</p>
+                <p>{f"Your current portfolio value is ${float(historic['Total'].iloc[-1]):,.2f}"}</p>
                 <div class="image-container">
         """
 
@@ -139,11 +184,26 @@ def email_create(sender, to, holdings):
                 html_content += f'<br><img src="cid:{filename}">'
                 # Add caption text (can customize the caption as needed)
                 if filename[:4] != "zzz_":
-                    caption = f"Current Stock Value: ${float(generate_data(holdings)[filename[:4]].iloc[-1]):,.2f}"  # Customize caption here if needed
-                    html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'  # Center-align the caption
+                    stockname = filename.split('_')[0]
+                    caption = f"Current {yf.Ticker(stockname).info['longName']} Value: ${float(historic[stockname].iloc[-1]):,.2f}"
+                    calc = (float(historic[stockname].iloc[-1]) - float(historic[stockname].iloc[-2]))
+                    calculation = f"{calc:,.2f} From Yesterday"  # Customize caption here if needed
+                    html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'
+                    if calc > 0:
+                        color = "green"
+                    else:
+                        color = "red"
+                    html_content += f'<p style="text-align: center; margin-top: 0; color: {color};">{calculation}</p>'  # Center-align the caption
                 else:
                     caption = f"Portfolio Value"  # Customize caption here if needed
-                    html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'  # Center-align the caption
+                    calc_total = (float(historic['Total'].iloc[-1]) - float(historic['Total'].iloc[-2]))
+                    calculation = f"{calc_total:,.2f} From Yesterday"
+                    html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'
+                    if calc_total > 0:
+                        color = "green"
+                    else:
+                        color = "red"
+                    html_content += f'<p style="text-align: center; margin-top: 0; color: {color};">{calculation}</p>'  # Center-align the caption
 
 
         # Close HTML content
