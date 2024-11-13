@@ -11,7 +11,7 @@ def run_script():
     os.system("python main.py")  # Adjust the path as needed
 
 # Schedule the job to run daily at a specific time (e.g., 8:00 AM)
-schedule.every().day.at("08:00").do(run_script)  # Adjust the time as needed
+schedule.every().day.at("06:00").do(run_script)  # Adjust the time as needed
 
 while True:
     schedule.run_pending()  # Check if a scheduled task is pending
