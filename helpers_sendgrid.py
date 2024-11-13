@@ -1,18 +1,13 @@
+import os
+import base64
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, Email, To, Content, Attachment
+from datetime import datetime
 import yfinance as yf
 import pandas as pd
 import matplotlib.pyplot as plt
-import os
-import base64
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.image import MIMEImage
 import shutil
-from datetime import datetime
-
+import json
 
 
 def generate_data(holdings):
@@ -41,20 +36,6 @@ def generate_plots(holdings):
         os.makedirs('plots')
     else:
         os.makedirs('plots')
-
-    # for stock in stocks:
-    #     plt.figure(figsize=(10,6))
-    #     info = yf.Ticker(stock)
-    #     value[stock] = holdings[stock] * info.info['regularMarketPreviousClose']
-    #     stock_history = info.history(period="6mo")
-    #     historic = pd.concat([historic, (stock_history['Close'] * holdings[stock]).rename(stock)], axis=1)
-    #     plt.plot(stock_history.index, stock_history['Close'] * holdings[stock], marker='o', linestyle='-')
-    #     plt.title(f'Six Month Value of {stock.upper()} - {holdings[stock]} Shares')
-    #     # plt.show
-
-    #     plot_filename = f'plots/{stock}_plot.png'
-    #     plt.savefig(plot_filename)
-    #     plt.close()
 
     for stock in stocks:
         plt.figure(figsize=(10, 6))
@@ -86,8 +67,6 @@ def generate_plots(holdings):
         plt.savefig(plot_filename)
         plt.close()
 
-
-
     historic['Total'] = historic.sum(axis=1)
     plt.figure(figsize=(10, 6))
 
@@ -113,31 +92,13 @@ def generate_plots(holdings):
 
     return 'plots/' 
 
-
-import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.mime.image import MIMEImage
-import base64
-from datetime import datetime
-import yfinance as yf
-
-import os
-from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail, Attachment, Content, Email, To
-from email.mime.image import MIMEImage
-import base64
-from datetime import datetime
-import yfinance as yf
-
 def email_create(sender, to, holdings):
     historic = generate_data(holdings)
 
     def create_message(sender, to, image_dir):
         """Create an email message with inline images and improved HTML/CSS styling."""
-        # Prepare the HTML content
+        
+        # Start HTML content with improved CSS styling
         html_content = f"""
         <html>
         <head>
@@ -178,26 +139,15 @@ def email_create(sender, to, holdings):
                 <div class="image-container">
         """
 
-        # Loop through each image file and add it inline in the HTML content
         attachments = []
-        for filename in sorted(os.listdir(image_dir)):
+        
+        # Process images and add Content-ID references in HTML
+        for idx, filename in enumerate(sorted(os.listdir(image_dir))):
             if filename.endswith(('.png', '.jpg', '.jpeg')):
-                with open(os.path.join(image_dir, filename), 'rb') as f:
-                    img_data = f.read()
-
-                # Create an inline image attachment
-                # attachment = Attachment()
-                # attachment.file_content = base64.b64encode(img_data).decode()
-                # attachment.file_type = "image/jpeg"  # or 'image/png' depending on file type
-                # attachment.file_name = filename
-                # attachment.disposition = "inline"
-                # attachment.content_id = filename
-                # attachments.append(attachment)
-
-                # Add the image with `cid:filename` to HTML content
-                html_content += f'<br><img src="cid:{filename}">'
+                cid = f"image{idx}"
+                html_content += f'<br><img src="cid:{cid}">'
                 
-                # Add captions based on filename details
+                # Captions for each image
                 if filename[:4] != "zzz_":
                     stockname = filename.split('_')[0]
                     caption = f"Current {yf.Ticker(stockname).info['longName']} Value: ${float(historic[stockname].iloc[-1]):,.2f}"
@@ -214,6 +164,18 @@ def email_create(sender, to, holdings):
                     html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'
                     html_content += f'<p style="text-align: center; margin-top: 0; color: {color};">{calculation}</p>'
 
+                # Read and attach image with Content-ID
+                with open(os.path.join(image_dir, filename), 'rb') as img_file:
+                    img_data = base64.b64encode(img_file.read()).decode()
+                    attachment = Attachment(
+                        file_content=img_data,
+                        file_type="image/png",  # Set MIME type as a string
+                        file_name=filename,
+                        disposition="inline",  # Use "inline" as a string
+                        content_id=cid
+                    )
+                    attachments.append(attachment)
+
         # Close HTML content
         html_content += """
                 </div>
@@ -228,31 +190,22 @@ def email_create(sender, to, holdings):
 
         # Create the SendGrid Mail object
         mail = Mail(
-            from_email=sender,
-            to_emails=to,
+            from_email=Email(sender),
+            to_emails=To(to),
             subject=f"Your Daily Portfolio Update for {datetime.now().strftime('%B %d, %Y')}",
-            html_content=html_content
+            html_content=Content("text/html", html_content)
         )
 
-        # Attach images inline using SendGrid's Attachment method
-        for filename in os.listdir(image_dir):
-            if filename.endswith(('.png', '.jpg', '.jpeg')):
-                with open(os.path.join(image_dir, filename), 'rb') as f:
-                    img_data = f.read()
-                    attachment = Attachment()
-                    attachment.file_content = base64.b64encode(img_data).decode()
-                    attachment.file_type = "image/jpeg"  # Or 'image/png' depending on the image type
-                    attachment.file_name = filename
-                    attachment.disposition = "inline"
-                    attachment.content_id = f"<{filename}>"
-                    mail.add_attachment(attachment)
+        # Attach inline images to the email
+        for attachment in attachments:
+            mail.add_attachment(attachment)
 
         return mail
 
     def send_email(sender, to, image_dir):
         """Send an email using SendGrid."""
         try:
-            sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))  # Use environment variable for API key
+            sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
             mail = create_message(sender, to, image_dir)
             response = sg.send(mail)
             print(f"Email sent successfully: {response.status_code}")
@@ -267,3 +220,16 @@ def email_create(sender, to, holdings):
     # Send email with the provided sender, recipient, and image directory
     send_email(sender, to, image_directory)
 
+def email_per_user():
+    directory = 'holdings'
+    users = os.listdir(directory)
+    # print(users)
+    for user in users:
+        with open("holdings/"+user, "r") as json_file:
+            holdings = json.load(json_file)
+
+        sender = "stocks@ajbeery.com"
+        to = holdings["EMAIL"]
+        del holdings['EMAIL']
+
+        email_create(sender, to, holdings)

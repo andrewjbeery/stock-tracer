@@ -5,10 +5,11 @@ subprocess.check_call(["pip", "install", "-r", "requirements.txt"], stdout=subpr
 import json
 from helpers_sendgrid import email_create
 
-with open("holdings_real.json", "r") as json_file:
+with open("stress_test.json", "r") as json_file:
     holdings = json.load(json_file)
 
-sender = "andrewjosephbeery@gmail.com"
-to = "andrewjbeery@gmail.com"
+sender = "stocks@ajbeery.com"
+to = holdings["EMAIL"]
+del holdings['EMAIL']
 
 email_create(sender, to, holdings)

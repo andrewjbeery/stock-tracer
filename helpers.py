@@ -35,7 +35,7 @@ def generate_plots(holdings):
     historic = pd.DataFrame()
 
     stocks = list(holdings.keys())
-
+    
     if os.path.exists('plots'):
         shutil.rmtree('plots')  # Deletes everything in the directory
         os.makedirs('plots')
