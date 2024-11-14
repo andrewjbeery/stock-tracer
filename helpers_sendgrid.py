@@ -97,7 +97,7 @@ def email_create(sender, to, holdings):
 
     def create_message(sender, to, image_dir):
         """Create an email message with inline images and improved HTML/CSS styling."""
-        
+        value = (str(historic['Total'].iloc[-1]))
         # Start HTML content with improved CSS styling
         html_content = f"""
         <html>
@@ -134,8 +134,16 @@ def email_create(sender, to, holdings):
         </head>
         <body>
             <div class="email-container">
-                <h1>Your Daily Portfolio Update Has Landed!</h1>
+                <h1>Your Daily Portfolio Update Has Landed!<br /></h1>
                 <time>{datetime.now().strftime('%B %d, %Y')}</time>
+                <p>‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎  ‎‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ 
+                  ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎ ‎   </p>
                 <p>{f"Your current portfolio value is ${float(historic['Total'].iloc[-1]):,.2f}"}</p>
                 <div class="image-container">
         """
@@ -157,6 +165,7 @@ def email_create(sender, to, holdings):
                     color = "green" if calc > 0 else "red"
                     html_content += f'<p style="text-align: center; margin-top: 0;">{caption}</p>'
                     html_content += f'<p style="text-align: center; margin-top: 0; color: {color};">{calculation}</p>'
+                    html_content += f'<p style="text-align: center; margin-top: 0;">Stock Value:${yf.Ticker(stockname).info["regularMarketPreviousClose"]}</p>'
                 else:
                     caption = "Portfolio Value"
                     calc_total = (float(historic['Total'].iloc[-1]) - float(historic['Total'].iloc[-2]))
