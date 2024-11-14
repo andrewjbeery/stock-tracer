@@ -1,0 +1,6 @@
+test/
+.env
+credentials.json
+token.json
+holdings/holdings.json
+holdings/stress_test.json
