@@ -135,6 +135,7 @@ def email_create(sender, to, holdings):
         <body>
             <div class="email-container">
                 <h1>Your Daily Portfolio Update Has Landed!</h1>
+                <time>{datetime.now().strftime('%B %d, %Y')}</time>
                 <p>{f"Your current portfolio value is ${float(historic['Total'].iloc[-1]):,.2f}"}</p>
                 <div class="image-container">
         """
