@@ -243,3 +243,74 @@ def email_per_user():
         del holdings['EMAIL']
 
         email_create(sender, to, holdings)
+
+def email_init():
+    """Send an email to indicate that the Dockerfile is running."""
+    sender = "stocks@ajbeery.com"
+    to = "status@ajbeery.com"
+    subject = "Dockerfile is running"
+
+    # Create a simple HTML content for the email
+    html_content = f"""
+    <html>
+    <body>
+        <h1>Dockerfile Status</h1>
+        <p>The Dockerfile is currently running successfully on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')}.</p>
+    </body>
+    </html>
+    """
+
+    # Create the SendGrid Mail object
+    mail = Mail(
+        from_email=Email(sender),
+        to_emails=To(to),
+        subject=subject,
+        html_content=Content("text/html", html_content)
+    )
+
+    try:
+        sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
+        response = sg.send(mail)
+        print(f"Notification email sent successfully: {response.status_code}")
+        print(response.body)
+        print(response.headers)
+    except Exception as e:
+        print(f"Error sending notification email: {e}")
+
+# Ensure you call email_init where appropriate in your application
+
+def email_error(error_message):
+    """Send an email with the error message to indicate an issue."""
+    sender = "stocks@ajbeery.com"
+    to = "status@ajbeery.com"
+    subject = "Error in Dockerfile Application"
+
+    # Create an HTML content for the error email
+    html_content = f"""
+    <html>
+    <body>
+        <h1>Error in Application</h1>
+        <p>The application encountered an error on {datetime.now().strftime('%B %d, %Y at %H:%M:%S')}.</p>
+        <p><strong>Error Details:</strong></p>
+        <pre style="background-color: #f4f4f4; padding: 10px; border-radius: 5px;">{error_message}</pre>
+        <p>Please check the logs for further investigation.</p>
+    </body>
+    </html>
+    """
+
+    # Create the SendGrid Mail object
+    mail = Mail(
+        from_email=Email(sender),
+        to_emails=To(to),
+        subject=subject,
+        html_content=Content("text/html", html_content)
+    )
+
+    try:
+        sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
+        response = sg.send(mail)
+        print(f"Error notification email sent successfully: {response.status_code}")
+        print(response.body)
+        print(response.headers)
+    except Exception as e:
+        print(f"Error sending error notification email: {e}")
