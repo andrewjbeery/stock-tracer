@@ -1,6 +1,6 @@
 # Stock Tracker Setup
 
-This guide will help you set up the Stock Tracker using Docker.
+This guide will help you set up the Stock Tracker using Docker on your Linux Machine.
 
 ## Initial Setup
 Before starting the container, you'll need to complete a few setup steps:
@@ -34,7 +34,7 @@ export SENDGRID_API_KEY="your_sendgrid_api_key"
 ```
 Retrieve the API Key:
 
-The API key is stored in a GitHub Gist. Ensure you have access to it and use the key when setting the environment variable.
+My API key is stored in a GitHub Gist. You can get yours through sendgrid.
 
 ## Building the Docker Image
 
