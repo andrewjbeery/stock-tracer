@@ -10,6 +10,13 @@ import shutil
 import json
 
 
+###############################################################################################################################################################
+#I couldn't figure out how to make it happy with me so I am hardcoding it, and putting placeholders for github commits. This will be in app.py and helpers_sendgrid.py
+SENDGRID_API_KEY="Placeholder"
+ngrok_auth_token = "Placeholder"
+
+###############################################################################################################################################################
+
 def generate_data(holdings):
     value = dict()
  
@@ -215,7 +222,7 @@ def email_create(sender, to, holdings):
     def send_email(sender, to, image_dir):
         """Send an email using SendGrid."""
         try:
-            sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
+            sg = SendGridAPIClient(SENDGRID_API_KEY)
             mail = create_message(sender, to, image_dir)
             response = sg.send(mail)
             print(f"Email sent successfully: {response.status_code}")
@@ -269,7 +276,7 @@ def email_init():
     )
 
     try:
-        sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(mail)
         print(f"Notification email sent successfully: {response.status_code}")
         print(response.body)
@@ -307,7 +314,7 @@ def email_error(error_message):
     )
 
     try:
-        sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
+        sg = SendGridAPIClient(SENDGRID_API_KEY)
         response = sg.send(mail)
         print(f"Error notification email sent successfully: {response.status_code}")
         print(response.body)

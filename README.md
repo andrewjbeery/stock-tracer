@@ -57,3 +57,27 @@ docker run -d \
 
 your_api_key: Replace this with your SendGrid API key.
 
+
+
+
+
+# NEW STUFF
+
+docker build -t flask-app -f flask.Dockerfile .
+
+
+docker build -t stock-tracker -f email.Dockerfile .
+
+
+docker-compose build
+
+
+docker-compose up -d
+
+# TROUBLESHOOTING
+
+To install compose
+
+pip3 install "cython<3.0.0" wheel && pip3 install pyyaml==5.4.1 --no-build-isolation
+pip3 install docker-compose==1.27.4
+

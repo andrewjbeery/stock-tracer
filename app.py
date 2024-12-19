@@ -9,7 +9,16 @@ import yfinance as yf
 import shutil
 import base64
 from helpers_sendgrid import email_create  # Assuming the email_create function is in a separate file
+from pyngrok import ngrok  # Import pyngrok to control the tunnel
+from helpers_sendgrid import email_init
+# from dotenv import load_dotenv 
 
+###############################################################################################################################################################
+#I couldn't figure out how to make it happy with me so I am hardcoding it, and putting placeholders for github commits. This will be in app.py and helpers_sendgrid.py
+SENDGRID_API_KEY="Placeholder"
+ngrok_auth_token = "Placeholder"
+
+###############################################################################################################################################################
 app = Flask(__name__)
 CORS(app)
 
@@ -18,6 +27,35 @@ HOLDINGS_DIR = os.path.join(os.getcwd(), 'holdings')
 
 # Ensure holdings directory exists
 os.makedirs(HOLDINGS_DIR, exist_ok=True)
+
+
+ngrok.set_auth_token(ngrok_auth_token)
+
+# Start ngrok and get the public URL
+public_url = ngrok.connect(5000)
+print(f" * ngrok tunnel \"{public_url}\" -> \"http://127.0.0.1:5000\"")
+
+welcome_subject = "Docker Compose"
+welcome_html_content = f"""
+<html>
+<body>
+    <h1>Please Update in github {public_url}!</h1>
+</body>
+</html>
+"""
+# Send the welcome email
+mail = Mail(
+    from_email=Email("stocks@ajbeery.com"),
+    to_emails=To("status@ajbeery.com"),
+    subject=welcome_subject,
+    html_content=Content("text/html", welcome_html_content)
+)
+try:
+    sg = SendGridAPIClient(SENDGRID_API_KEY)
+    response = sg.send(mail)
+    print(f"Welcome email sent successfully: {response.status_code}")
+except Exception as e:
+    print(f"Error sending welcome email: {e}")
 
 @app.route('/submit', methods=['POST'])
 def submit():
@@ -69,7 +107,7 @@ def submit():
             html_content=Content("text/html", welcome_html_content)
         )
         try:
-            sg = SendGridAPIClient(os.environ.get('sendgrid_api_key'))
+            sg = SendGridAPIClient(SENDGRID_API_KEY)
             response = sg.send(mail)
             print(f"Welcome email sent successfully: {response.status_code}")
         except Exception as e:
