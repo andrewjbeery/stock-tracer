@@ -1,0 +1,46 @@
+version: '1.0'
+
+services:
+  flask:
+    build:
+      context: .
+      dockerfile: flask.Dockerfile
+    ports:
+      - "5000:5000"
+    networks:
+      - flask-net
+    environment:
+      - FLASK_APP=app.py
+    command: flask run --host=0.0.0.0
+
+  ngrok:
+    image: wernight/ngrok
+    command: "http flask:5000"
+    environment:
+      - NGROK_AUTHTOKEN=your-ngrok-auth-token-here
+      - NGROK_REGION=us  # optional: set the region for your ngrok tunnel (e.g., us, eu, etc.)
+    ports:
+      - "4040:4040"  # ngrok web interface to view tunnel status
+    networks:
+      - flask-net
+    depends_on:
+      - flask
+    entrypoint: >
+      sh -c "ngrok http flask:5000 & ./get_ngrok_url.sh"
+
+  email:
+    image: stock-tracker
+    container_name: email-service
+    restart: unless-stopped
+    volumes:
+      - /home/aj-beery/stock-tracer/holdings:/app/holdings
+    environment:
+      - SENDGRID_API_KEY=sendgridapikey
+    networks:
+      - flask-net
+    depends_on:
+      - flask
+
+networks:
+  flask-net:
+    driver: bridge

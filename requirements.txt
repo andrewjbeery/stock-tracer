@@ -8,3 +8,7 @@ schedule
 # dotenv
 sendgrid
 # psycopg2
+Flask
+Flask-Cors
+sendgrid
+yfinance
