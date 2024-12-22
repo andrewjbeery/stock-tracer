@@ -14,13 +14,16 @@ from helpers_sendgrid import email_init
 # from dotenv import load_dotenv 
 
 ###############################################################################################################################################################
-#I couldn't figure out how to make it happy with me so I am hardcoding it, and putting placeholders for github commits. This will be in app.py and helpers_sendgrid.py
-SENDGRID_API_KEY="Placeholder"
-ngrok_auth_token = "Placeholder"
+#I couldn't figure out how to make it happy with me so I am hardcoding it, and putting placeholders for github commits
+SENDGRID_API_KEY= Placeholder
+ngrok_auth_token = Placeholder
 
 ###############################################################################################################################################################
+
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/submit": {"origins": "*"}})
+CORS(app, resources={r"/delete": {"origins": "*"}})
+
 
 # Path to the holdings directory
 HOLDINGS_DIR = os.path.join(os.getcwd(), 'holdings')
@@ -122,6 +125,25 @@ def submit():
         email_create(sender, to, stocks)  # Use the email_create function to send the email with the plots
 
     return jsonify({"message": "Data saved successfully and email sent!"})
+
+@app.route('/delete', methods=['POST'])
+def delete():
+    data = request.json  # Expecting JSON payload
+    email = data.get('email')
+
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
+    # Path to the user's data file
+    file_path = os.path.join(HOLDINGS_DIR, f"{email.replace('@', '_at_')}.json")
+
+    # Check if the file exists and delete it
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return jsonify({"message": f"Data for {email} has been deleted successfully!"}), 200
+    else:
+        return jsonify({"error": f"No data found for {email}."}), 404
+
 
 if __name__ == '__main__':
     app.run(port=5000)

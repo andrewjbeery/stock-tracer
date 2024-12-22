@@ -11,11 +11,12 @@ import json
 
 
 ###############################################################################################################################################################
-#I couldn't figure out how to make it happy with me so I am hardcoding it, and putting placeholders for github commits. This will be in app.py and helpers_sendgrid.py
-SENDGRID_API_KEY="Placeholder"
-ngrok_auth_token = "Placeholder"
+#I couldn't figure out how to make it happy with me so I am hardcoding it, and putting placeholders for github commits
+SENDGRID_API_KEY=placeholder
+ngrok_auth_token = placeholder
 
 ###############################################################################################################################################################
+
 
 def generate_data(holdings):
     value = dict()

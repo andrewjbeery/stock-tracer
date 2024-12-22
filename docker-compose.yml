@@ -12,6 +12,7 @@ services:
     command: python app.py  # Start Flask directly
     volumes:
       - flask_data:/app/holdings  # Use the shared volume
+    restart: unless-stopped 
 
   email:
     image: stock-tracker
@@ -20,7 +21,7 @@ services:
     volumes:
       - flask_data:/app/holdings  # Use the same shared volume
     environment:
-      - SENDGRID_API_KEY=Placeholder
+      - SENDGRID_API_KEY=placeholder
     networks:
       - flask-net
 
